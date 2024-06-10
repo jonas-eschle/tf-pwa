@@ -11,7 +11,7 @@ def test_particle(toy_config):
     assert f(m).shape == (5, 6)
     g = toy_config.get_particle_function("R_BC", d_norm=True)
     g.phsp_fractor(m)
-    cached_g = g.cached_fun(m)
+    cached_g = g.cached_call(m)
     assert np.allclose(g(m).numpy(), cached_g().numpy())
     g.density(m)
     assert g(m).shape == (5, 6)
