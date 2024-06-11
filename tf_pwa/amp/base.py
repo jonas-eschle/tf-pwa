@@ -495,6 +495,54 @@ class ParticlePoly(Particle):
         return tf.math.polyval(pi, mass)
 
 
+@regist_particle("MLP")
+class ParticleMLP(Particle):
+    """
+    Multilayer Perceptron like model.
+
+    .. math::
+        R(m) = \\sum_{k} w_k activation(m-m_0+b_k)
+
+    lineshape when `interp_N: 11`, `activation: relu`, :math:`b_k=(k-5)/10`, :math:`w_k = exp(k i\\pi/2)`
+
+    .. plot::
+
+        >>> import  matplotlib.pyplot as plt
+        >>> import numpy as np
+        >>> plt.clf()
+        >>> from tf_pwa.utils import plot_particle_model
+        >>> plot_params = {f"R_BC_b_{i}": (i-5)/10 for i in range(11)}
+        >>> plot_params.update({f"R_BC_w_{i}r": 1 for i in range(11)})
+        >>> plot_params.update({f"R_BC_w_{i}i": i * np.pi/2 for i in range(11)})
+        >>> axis = plot_particle_model("MLP", params={"interp_N": 11, "activation": "relu"}, plot_params=plot_params)
+
+    """
+
+    activation_function = {
+        "relu2": lambda x: tf.nn.relu(x) ** 2,
+        "relu3": lambda x: tf.nn.relu(x) ** 3,
+    }
+
+    def init_params(self):
+        self.interp_N = getattr(self, "interp_N", 3)
+        self.activation = getattr(self, "activation", "leaky_relu")
+        self.activation_f = ParticleMLP.activation_function.get(
+            self.activation, getattr(tf.nn, self.activation)
+        )
+        self.bi = self.add_var("b", shape=(self.interp_N,))
+        self.wi = self.add_var("w", shape=(self.interp_N,), is_complex=True)
+        self.wi.set_fix_idx(fix_idx=0, fix_vals=(1.0, 0.0))
+
+    def get_amp(self, data, _data_c=None, **kwargs):
+        mass = data["m"] - self.get_mass()
+        bi = tf.stack(self.bi())
+        wi = tf.stack(self.wi())
+        x = tf.expand_dims(mass, axis=-1) + bi
+        x = self.activation_f(x)
+        ret = tf.reduce_sum(wi * tf.complex(x, tf.zeros_like(x)), axis=-1)
+        return ret
+
+
 @regist_decay("particle-decay")
 class ParticleDecay(HelicityDecay):
     def get_ls_amp(self, data, data_p, **kwargs):

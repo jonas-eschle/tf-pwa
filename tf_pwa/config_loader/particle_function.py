@@ -28,6 +28,17 @@ class ParticleFunction:
         ret = a[self.idx]
         return self.norm_factor * ret
 
+    def cached_call(self, m, **kwargs):
+        p = self.ha.generate_p_mass(self.name, m, **kwargs)
+        data = self.config.data.cal_angle(p)
+
+        def f():
+            a = build_amp.build_params_vector(self.decay_group, data)
+            ret = a[self.idx]
+            return self.norm_factor * ret
+
+        return f
+
     def mass_range(self):
         return self.ha.get_mass_range(self.name)
 
