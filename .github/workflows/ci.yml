@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         python-version: [3.7]
     steps:
       - uses: actions/checkout@master
@@ -51,7 +51,7 @@ jobs:
     needs: [fulltest, pytest, pytest_uproot3]
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         python-version: [3.7]
     steps:
       - uses: actions/checkout@master
@@ -82,7 +82,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
     steps:
       - uses: actions/checkout@master
       - name: Setup Miniconda
@@ -109,7 +109,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
     steps:
       - uses: actions/checkout@master
       - name: Setup Miniconda
@@ -134,15 +134,15 @@ jobs:
     strategy:
       matrix:
         os:
-          - macos-11
-          - ubuntu-20.04
-        python-version: [3.6, 3.7, 3.8]
+          - macos-latest
+          - ubuntu-22.04
+        python-version: [3.6, 3.7, 3.11]
         exclude:
-          - os: macos-11
+          - os: macos-latest
             python-version: 3.6
-          - os: macos-11
+          - os: macos-latest
             python-version: 3.8
-          - os: ubuntu-20.04 # coverage job
+          - os: ubuntu-22.04 # coverage job
             python-version: 3.7
     steps:
       - uses: actions/checkout@v2
@@ -170,7 +170,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         python-version: [3.7]
     steps:
       - uses: actions/checkout@v2
@@ -196,7 +196,7 @@ jobs:
   documentation:
     name: Build documentation
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.7
@@ -215,7 +215,7 @@ jobs:
   style:
     name: Style checks
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.7
