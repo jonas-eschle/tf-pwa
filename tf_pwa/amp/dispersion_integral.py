@@ -168,7 +168,7 @@ class DispersionIntegralParticle(Particle):
         >>> x2 = p.int_f[0](s)/np.pi
         >>> p_ref = DispersionIntegralParticle("A0_980_DI", mass_range=(0.6,1.6), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=11, int_method="scipy")
         >>> p_ref.init_params()
-        >>> s_ref = np.linspace(0.6**2, 1.6**2, 11)
+        >>> s_ref = np.linspace(0.6**2, 1.6**2-1e-6, 11)
         >>> x_ref = p_ref.int_f[0](s_ref)/np.pi
         >>> plt.plot(m, y1* scale1, label="$\\\\rho'(s)$")
         >>> plt.plot(m, x1* scale1, label="Re $\\\\Pi (s)$")
@@ -297,7 +297,7 @@ class DispersionIntegralParticle2(DispersionIntegralParticle):
         >>> x1 = p.int_f[0](s) * (s-M_K**2*4)/np.pi
         >>> p_ref = DispersionIntegralParticle2("A0_980_DI", mass_range=(0.6,1.6), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=11, int_method="scipy")
         >>> p_ref.init_params()
-        >>> s_ref = np.linspace(0.6**2, 1.6**2, 11)
+        >>> s_ref = np.linspace(0.6**2, 1.6**2-1e-6, 11)
         >>> x_ref = p_ref.int_f[0](s_ref) * (s_ref-M_K**2*4)/np.pi
         >>> plt.plot(m, y1* scale1, label="Im $\\\\Pi (s)$")
         >>> plt.plot(m, x1* scale1, label="Re $\\\\Pi (s)$")
