@@ -170,12 +170,12 @@ class DispersionIntegralParticle(Particle):
         >>> p_ref.init_params()
         >>> s_ref = np.linspace(0.6**2, 1.6**2-1e-6, 11)
         >>> x_ref = p_ref.int_f[0](s_ref)/np.pi
-        >>> plt.plot(m, y1* scale1, label="$\\\\rho'(s)$")
-        >>> plt.plot(m, x1* scale1, label="Re $\\\\Pi (s)$")
-        >>> plt.plot(m, y2* scale2, linestyle="--")
-        >>> plt.plot(m, x2* scale2, linestyle="--")
-        >>> plt.scatter(np.sqrt(s_ref), x_ref* scale1, label="scipy integration")
-        >>> plt.legend()
+        >>> _ = plt.plot(m, y1* scale1, label="$\\\\rho'(s)$")
+        >>> _ = plt.plot(m, x1* scale1, label="Re $\\\\Pi (s)$")
+        >>> _ = plt.plot(m, y2* scale2, linestyle="--")
+        >>> _ = plt.plot(m, x2* scale2, linestyle="--")
+        >>> _ = plt.scatter(np.sqrt(s_ref), x_ref* scale1, label="scipy integration")
+        >>> _ = plt.legend()
 
     The Argand plot is
 
@@ -187,7 +187,7 @@ class DispersionIntegralParticle(Particle):
         >>> M_eta = 0.547862
         >>> M_pi = 0.1349768
         >>> from tf_pwa.utils import plot_particle_model
-        >>> plot_particle_model("DI", dict(mass=0.98, mass_range=(0,2.0), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=101), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05])
+        >>> _ = plot_particle_model("DI", dict(mass=0.98, mass_range=(0,2.0), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=101), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05])
 
     """
 
@@ -299,10 +299,10 @@ class DispersionIntegralParticle2(DispersionIntegralParticle):
         >>> p_ref.init_params()
         >>> s_ref = np.linspace(0.6**2, 1.6**2-1e-6, 11)
         >>> x_ref = p_ref.int_f[0](s_ref) * (s_ref-M_K**2*4)/np.pi
-        >>> plt.plot(m, y1* scale1, label="Im $\\\\Pi (s)$")
-        >>> plt.plot(m, x1* scale1, label="Re $\\\\Pi (s)$")
-        >>> plt.scatter(np.sqrt(s_ref), x_ref* scale1, label="scipy integration")
-        >>> plt.legend()
+        >>> _ = plt.plot(m, y1* scale1, label="Im $\\\\Pi (s)$")
+        >>> _ = plt.plot(m, x1* scale1, label="Re $\\\\Pi (s)$")
+        >>> _ = plt.scatter(np.sqrt(s_ref), x_ref* scale1, label="scipy integration")
+        >>> _ = plt.legend()
 
     The Argand plot is
 
@@ -314,7 +314,7 @@ class DispersionIntegralParticle2(DispersionIntegralParticle):
         >>> M_eta = 0.547862
         >>> M_pi = 0.1349768
         >>> from tf_pwa.utils import plot_particle_model
-        >>> plot_particle_model("DI2", dict(mass=0.98, mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], l_list=[0,1], int_N=601), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05])
+        >>> _ = plot_particle_model("DI2", dict(mass=0.98, mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], l_list=[0,1], int_N=601), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05])
 
     """
 
