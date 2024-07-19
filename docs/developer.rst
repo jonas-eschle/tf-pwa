@@ -5,17 +5,17 @@ Setup for Developer Enveriment
    Before the developing, creating a standalone enveriment is recommanded (see https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands for more).
 
 
-The main steps are similar as normal install, only two extra things need to be done.
+The main steps are similar to the normal installtion process, however two additonal steps are to be performed here.
 
-The first things is writing tests, and tests your code.
-We use pytest (https://docs.pytest.org/en/stable/) framework, You should install it.
+The first thing is writing tests, and testing your code.
+We use pytest (https://docs.pytest.org/en/stable/) framework for the same, it should be installed as well.
 
 .. code::
 
     conda install pytest pytest-cov pytest-benchmark
 
 
-The other things is `pre-commit`. it need for developing.
+The other thing is `pre-commit`. it is needed for developing.
 
 1. You can install `pre-commit` as
 
@@ -32,7 +32,7 @@ and
     conda install pylint # local dependences
     pre-commit install
 
-You can check if pre-commit is working well by running
+You can check if pre-commit is working well by running:
 
 .. code::
 
@@ -44,9 +44,9 @@ It may take some time to install required package.
    If there are some `GLIBC_XXX` errors at this step, you can try to install `node.js`.
 
 .. note::
-   For developer using editor with formatter, you should be careful for the options.
+   For developer using editor with formatter, you should be careful about the options.
 
-The following are all commands needed
+The following are all commands needed:
 
 .. code::
 

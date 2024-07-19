@@ -12,9 +12,9 @@ FAQ
 
 Check the jac value,
 
-1.1 If all absulute value is small. it is acceptable beacuse of the precision.
+1.1 If all absulute value is small. it is acceptable because of the precision.
 
-1.2 If some absulte value is large. It is the bad parameters or problem in models.
+1.2 If some absolute value is large. It is the bad parameters or problem in models.
 
 1.3 Avoid negative weights
 
@@ -28,7 +28,7 @@ Check the jac value,
 2.1 Check the data.
 -------------------
 
-There a script (scripts/check_nan.py) to check it.
+There is a script (scripts/check_nan.py) to check it.
 
 2.1.1 No stange value in data, (nan, infs ...).
 
@@ -42,7 +42,7 @@ There a script (scripts/check_nan.py) to check it.
 2.2 Check the model.
 --------------------
 
-2.2.1 The resonaces mass should be valid, for example in the mass range (m1+m2, m0-m3), out of the threshold required special options.
+2.2.1 The resonaces mass should be valid, for example in the mass range (m1+m2, m0-m3), out of the threshold required for special options.
 
 3. NaN value when getting params error.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -53,9 +53,9 @@ There a script (scripts/check_nan.py) to check it.
 
 3.1 Similar as sec 2.2.
 
-3.2 Bad fit parameters: too wide width or two narrow width, reach the boundary and so on.
+3.2 Bad fit parameters: width too narrow or wide, reach the boundary and so on.
 
-3.3 Bad gradients. No gradients or the gradients is not corret for fit paramters.
+3.3 Bad gradients. No gradients or the gradients are not correct for fit paramters.
 
 4. Singular Matrix when getting params error
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -64,7 +64,7 @@ There a script (scripts/check_nan.py) to check it.
 
       numpy.linalg.LinAlgError: Singular matrix
 
-4.1 Free paramters are not used in model.
+4.1 Free parameters are not used in the model.
 
 4.2 Used numpy for calculation of variable. The calculation have to be done in get_amp with TensorFlow.
 
@@ -102,7 +102,7 @@ There a script (scripts/check_nan.py) to check it.
 
 5.1.3 Try to use small data sample, or simple cases (less final particles).
 
-5.1.4 Some speical model required large memory (such as interpolation model), try other model.
+5.1.4 Some special models require large memory (such as an interpolation model), try another model.
 
 5.2 CPU
 -------------------
@@ -142,10 +142,10 @@ The decay chain should be complete. All the item in decay should decay from init
 
   ::
 
-      RuntimeError: not decay chain aviable, check you config.yml
+      RuntimeError: not decay chain available, check you config.yml
 
 6.3.1 Similar as sec 6.2.
 
-6.3.2 Check the information in *remove decay chain*, see the reson why those decays are not aviable.
+6.3.2 Check the information in *remove decay chain*, see the reson why those decays are not available.
 
-*ls not aviable* means no possible LS combination allowed. Check the spin and parity. If allow parity voilate, add :code:`p_break: True` to decay.
+*ls not available* means no possible LS combination allowed. Check the spin and parity. If parity is allowed to be violated, add :code:`p_break: True` to decay.
