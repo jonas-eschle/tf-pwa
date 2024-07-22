@@ -4,7 +4,7 @@ Install
 To use TFPWA, we need some dependent packages. There are two main ways,
 `conda` and `virtualenv` you can choose *one* of them. *Or* you can choose other method in :ref:`other-method`
 
-1. vitrual environment
+1. virtual environment
 ----------------------
 
 To avoid conflict of dependence, we recommed to use vitrual environment. there are two main vitrual environment for python packages,
@@ -64,7 +64,7 @@ and then you can install packages in the conda environment
 
    source ./tfpwa/bin/activate
 
-- 1.2.5 You can  exit the environment by
+- 1.2.5 You can exit the environment by
 
 .. code::
 
@@ -105,7 +105,7 @@ When using `virtualenv`, there is also simple way to install tensorflow2
 
 
 3. Other dependencies
---------------------
+---------------------
 
 Other dependencies of TFPWA is simple.
 
@@ -126,7 +126,7 @@ Get the packages using
 
 3.2.1 other dependencies
 
-In conda environment, go into the directory of `tf-pwa`, you can install the rest dependencies by
+In conda environment, go into the directory of `tf-pwa`, you can install rest of the dependencies by
 
 .. code::
 
@@ -166,7 +166,7 @@ Using `-e`, so it can be updated by `git pull` directly.
 
 
 4. (option)  Other dependencies.
--------------------------------
+--------------------------------
 
    There are some optional packages, such as `uproot` for reading root file.
 
@@ -209,7 +209,7 @@ command to install it.
    conda install tf-pwa
 
 5.2  pip
-````````
+``````````
 
 When using `pip`, you will need to install CUDA to use GPU. Just run the
 following command :
