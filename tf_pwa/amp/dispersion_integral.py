@@ -5,25 +5,6 @@ from tf_pwa.amp.core import Particle, register_particle
 from tf_pwa.data import data_to_numpy
 
 
-def build_integral_tail(fun, x_center, tail, s_th, N=1001, _epsilon=1e-9):
-    """
-
-    Integration of the tail parts using tan transfrom.
-
-    .. math::
-       \\int_{s_{max}}^{\infty} \\frac{f(s')}{s'-s} \\mathrm{d} s' = \\int_{\\arctan s_{max}}^{\\frac{\\pi}{2}} \\frac{f(\\tan x)}{\\tan x-s} \\frac{\\mathrm{d} \\tan x}{\\mathrm{d} x} \\mathrm{d} x
-
-    """
-    x = np.linspace(np.arctan(tail), np.pi / 2 - _epsilon, N)
-    tanx = tf.tan(x)
-    dtanxdx = 1 / tf.cos(x) ** 2
-    fx = fun(tanx) / (tanx - x_center[:, None]) * dtanxdx
-    int_f = tf.reduce_mean(fx, axis=-1) * (
-        np.pi / 2 - _epsilon - np.arctan(tail)
-    )
-    return int_f
-
-
 def build_integral(fun, s_range, s_th, N=1001, add_tail=True, method="tf"):
     """
 
@@ -91,13 +72,63 @@ def build_integral_tf(fun, s_range, s_th, N=1001, add_tail=True):
     s_min, s_max = s_range
     delta = (s_min - s_max) / (N - 1)
     x = np.linspace(s_min - delta / 2, s_max + delta / 2, N + 1)
+    shift = (s_th - s_min) % delta
+    x = x + shift * delta
     x_center = (x[1:] + x[:-1]) / 2
-    int_x = x[x > s_th]
+    int_x = x[x > s_th + delta / 4]
     fx = fun(int_x) / (int_x - x_center[:, None])
-    int_f = tf.reduce_mean(fx, axis=-1) * (s_max - s_th)
+    int_f = tf.reduce_mean(fx, axis=-1) * (int_x[-1] - int_x[0] + delta)
     if add_tail:
-        int_f = int_f + build_integral_tail(fun, x_center, s_max, s_th, N)
+        int_f = int_f + build_integral_tail(
+            fun, x_center, x[-1] + delta / 2, s_th, N
+        )
     return x_center, int_f
+
+
+def build_integral_tail(fun, x_center, tail, s_th, N=1001, _epsilon=1e-9):
+    """
+
+    Integration of the tail parts using tan transfrom.
+
+    .. math::
+       \\int_{s_{max}}^{\infty} \\frac{f(s')}{s'-s} \\mathrm{d} s' = \\int_{\\arctan s_{max}}^{\\frac{\\pi}{2}} \\frac{f(\\tan x)}{\\tan x-s} \\frac{\\mathrm{d} \\tan x}{\\mathrm{d} x} \\mathrm{d} x
+
+    """
+    x_min, x_max = np.arctan(tail), np.pi / 2
+    delta = (x_min - x_max) / N
+    x = np.linspace(x_min + delta / 2, x_max - delta / 2, N)
+    tanx = tf.tan(x)
+    dtanxdx = 1 / tf.cos(x) ** 2
+    fx = fun(tanx) / (tanx - x_center[:, None]) * dtanxdx
+    int_f = tf.reduce_mean(fx, axis=-1) * (np.pi / 2 - np.arctan(tail))
+    return int_f
+
+
+def complex_q(s, m1, m2):
+    q2 = (s - (m1 + m2) ** 2) * (s - (m1 - m2) ** 2) / (4 * s)
+    q = tf.sqrt(tf.complex(q2, tf.zeros_like(q2)))
+    return q
+
+
+def chew_mandelstam(m, m1, m2):
+    """
+    Chew-Mandelstam function
+    """
+    s = m * m
+    C = lambda x: tf.complex(x, tf.zeros_like(x))
+    m1 = tf.cast(m1, s.dtype)
+    m2 = tf.cast(m2, s.dtype)
+    q = complex_q(s, m1, m2)
+    s1 = m1 * m1
+    s2 = m2 * m2
+    a = (
+        C(2 / m)
+        * q
+        * tf.math.log((C(s1 + s2 - s) + C(2 * m) * q) / C(2 * m1 * m2))
+    )
+    b = (s1 - s2) * (1 / s - 1 / (m1 + m2) ** 2) * tf.math.log(m1 / m2)
+    ret = a - C(b)
+    return ret / (16 * np.pi**2)
 
 
 class LinearInterpFunction:
@@ -131,7 +162,7 @@ class DispersionIntegralFunction(LinearInterpFunction):
 class DispersionIntegralParticle(Particle):
     """
 
-    "DI" (Dispersion Integral) model is the model used in `PRD78,074023(2008) <https://inspirehep.net/literature/793474>`_ . In the model a linear interpolation is used to avoid integration every times in  fitting. No paramters are allow in the integration.
+    "DI" (Dispersion Integral) model is the model used in `PRD78,074023(2008) <https://inspirehep.net/literature/793474>`_ . In the model a linear interpolation is used to avoid integration every times in  fitting. No paramters are allowed in the integration, unless `dyn_int=True`.
 
     .. math::
         f(s) = \\frac{1}{m_0^2 - s - \\sum_{i} [Re \\Pi_i(s) - Re\\Pi_i(m_0^2)] - i \\sum_{i} \\rho'_i(s) }
@@ -177,7 +208,7 @@ class DispersionIntegralParticle(Particle):
         >>> _ = plt.scatter(np.sqrt(s_ref), x_ref* scale1, label="scipy integration")
         >>> _ = plt.legend()
 
-    The Argand plot is
+    The Argand plot
 
     .. plot::
 
@@ -199,6 +230,7 @@ class DispersionIntegralParticle(Particle):
         l_list=None,
         int_N=1001,
         int_method="tf",
+        dyn_int=False,
         **kwargs
     ):
         super().__init__(*args, **kwargs)
@@ -210,6 +242,7 @@ class DispersionIntegralParticle(Particle):
         if l_list is None:
             l_list = [0] * len(mass_list)
         self.l_list = l_list
+        self.dyn_int = dyn_int
 
     def init_params(self):
         super().init_params()
@@ -236,22 +269,34 @@ class DispersionIntegralParticle(Particle):
     def q2_ch(self, s, m1, m2):
         return (s - (m1 + m2) ** 2) * (s - (m1 - m2) ** 2) / s / 4
 
+    def im_weight(self, s, m1, m2, l=0):
+        return tf.ones_like(s)
+
     def rho_prime(self, s, m1, m2, l=0):
         q2 = self.q2_ch(s, m1, m2)
         q2 = tf.where(s > (m1 + m2) ** 2, q2, tf.zeros_like(q2))
         rho = 2 * tf.sqrt(q2 / s)
         F = tf.exp(-self.alpha * q2)
-        return rho * F**2
+        return rho * F**2 / self.im_weight(s, m1, m2, l)
 
     def __call__(self, m):
+        if self.dyn_int:
+            self.init_integral()
         s = m * m
         m0 = self.get_mass()
         s0 = m0 * m0
         gi = tf.stack([var() ** 2 for var in self.gi], axis=-1)
-        im = tf.stack(
-            [self.rho_prime(s, m1, m2) for m1, m2 in self.mass_list], axis=-1
-        )
-        re = tf.stack([f(s) - f(s0) for f in self.int_f], axis=-1)
+        ims = []
+        res = []
+        for (m1, m2), li, f in zip(self.mass_list, self.l_list, self.int_f):
+            w = self.im_weight(s, m1, m2, li)
+            w0 = self.im_weight(s0, m1, m2, li)
+            tmp_i = self.rho_prime(s, m1, m2, li) * w
+            tmp_r = f(s) * w - f(s0) * w0
+            ims.append(tmp_i)
+            res.append(tmp_r)
+        im = tf.stack(ims, axis=-1)
+        re = tf.stack(res, axis=-1)
         real = s0 - s - tf.reduce_sum(gi * re, axis=-1) / np.pi
         imag = tf.reduce_sum(gi * im, axis=-1)
         dom = real**2 + imag**2
@@ -270,41 +315,53 @@ class DispersionIntegralParticle2(DispersionIntegralParticle):
     .. math::
         f(s) = \\frac{1}{m_0^2 - s - \\sum_{i} g_i^2 [Re\\Pi_i(s) -Re\\Pi_i(m_0^2) + i Im \\Pi_i(s)] }
 
-    where :math:`Im \\Pi_i(s)=\\rho_i(s)n_i(s)^2`, :math:`n_i(s)={q}^{l} {B_l'}(q,1/d, d)`.
+    where :math:`Im \\Pi_i(s)=\\rho_i(s)n_i^2(s)`, :math:`n_i(s)={q}^{l} {B_l'}(q,1/d, d)`.
 
     The real parts of :math:`\Pi(s)` is defined using the dispersion intergral
 
     .. math::
 
-        Re \\Pi_i(s) = \\frac{(s-s_{th,i})}{\\pi} P \\int_{s_{th,i}}^{\\infty} \\frac{Im \\Pi_i(s')}{(s' - s)(s'-s_{th})} \\mathrm{d} s'
+        Re \\Pi_i(s) = \\frac{\\color{red}(s-s_{th,i})}{\\pi} P \\int_{s_{th,i}}^{\\infty} \\frac{Im \\Pi_i(s')}{(s' - s)({\\color{red} s'-s_{th,i} })} \\mathrm{d} s'
 
-    The shape of Chew-Mandelstam function
+    .. note::
+
+        Small `int_N` will have bad precision.
+
+    The shape of :math:`\\Pi(s)` and comparing to Chew-Mandelstam function :math:`\\Sigma(s)`
 
     .. plot::
 
         >>> import matplotlib.pyplot as plt
-        >>> from tf_pwa.amp.dispersion_integral import DispersionIntegralParticle2
+        >>> import tensorflow as tf
+        >>> from tf_pwa.amp.dispersion_integral import DispersionIntegralParticle2, chew_mandelstam
         >>> plt.clf()
         >>> m = np.linspace(0.6, 1.6, 1001)
         >>> s = m * m
         >>> M_K = 0.493677
         >>> M_eta = 0.547862
         >>> M_pi = 0.1349768
-        >>> p = DispersionIntegralParticle2("A0_980_DI", mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=600)
+        >>> p = DispersionIntegralParticle2("A0_980_DI", mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=101)
         >>> p.init_params()
-        >>> y1 = p.rho_prime(s, *p.mass_list[0])* (s-M_K**2*4)
+        >>> p2 = DispersionIntegralParticle2("A0_980_DI", mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=1001)
+        >>> p2.init_params()
+        >>> y1 = p.rho_prime(s, M_K, M_K)* (s-M_K**2*4)
         >>> scale1 = 1/np.max(y1)
         >>> x1 = p.int_f[0](s) * (s-M_K**2*4)/np.pi
+        >>> x2 = p2.int_f[0](s) * (s-M_K**2*4)/np.pi
         >>> p_ref = DispersionIntegralParticle2("A0_980_DI", mass_range=(0.6,1.6), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=11, int_method="scipy")
         >>> p_ref.init_params()
         >>> s_ref = np.linspace(0.6**2, 1.6**2-1e-6, 11)
         >>> x_ref = p_ref.int_f[0](s_ref) * (s_ref-M_K**2*4)/np.pi
+        >>> x_chew = chew_mandelstam(s, M_K, M_K) * np.pi**2 * 4
+        >>> _ = plt.plot(m, x1* scale1, label="Re $\\\\Pi (s), N=101$")
+        >>> _ = plt.plot(m, x2* scale1, label="Re $\\\\Pi (s), N=1001$")
+        >>> _ = plt.plot(m, tf.math.real(x_chew).numpy() * scale1, label="$Re\\\\Sigma(s)$")
+        >>> _ = plt.plot(m, tf.math.imag(x_chew).numpy() * scale1, label="$Im \\\\Sigma(s)$")
         >>> _ = plt.plot(m, y1* scale1, label="Im $\\\\Pi (s)$")
-        >>> _ = plt.plot(m, x1* scale1, label="Re $\\\\Pi (s)$")
         >>> _ = plt.scatter(np.sqrt(s_ref), x_ref* scale1, label="scipy integration")
         >>> _ = plt.legend()
 
-    The Argand plot is
+    The Argand plot
 
     .. plot::
 
@@ -314,7 +371,10 @@ class DispersionIntegralParticle2(DispersionIntegralParticle):
         >>> M_eta = 0.547862
         >>> M_pi = 0.1349768
         >>> from tf_pwa.utils import plot_particle_model
-        >>> _ = plot_particle_model("DI2", dict(mass=0.98, mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], l_list=[0,1], int_N=601), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05])
+        >>> axis = plot_particle_model("DI2", dict(mass=0.98, mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], l_list=[0,1], int_N=101), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05])
+        >>> _ = plot_particle_model("DI2", dict(mass=0.98, mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], l_list=[0,1], int_N=1001), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05], axis=axis)
+        >>> _ = axis[3].legend(["N=101", "N=1001"])
+
 
     """
 
@@ -324,39 +384,81 @@ class DispersionIntegralParticle2(DispersionIntegralParticle):
         rho = 2 * tf.sqrt(q2 / s)
         from tf_pwa.breit_wigner import Bprime_q2
 
-        rhop = rho * q2**l * Bprime_q2(l, q2, 1 / self.d**2, self.d)
-        return rhop / (s - (m1 + m2) ** 2)
+        rhop = rho * q2**l * Bprime_q2(l, q2, 1 / self.d**2, self.d) ** 2
+        return rhop / self.im_weight(s, m1, m2, l)
 
-    def __call__(self, m):
-        s = m * m
-        m0 = self.get_mass()
-        s0 = m0 * m0
-        gi = tf.stack([var() ** 2 for var in self.gi], axis=-1)
-        im = tf.stack(
-            [
-                self.rho_prime(s, m1, m2) * (s - (m1 + m2) ** 2)
-                for m1, m2 in self.mass_list
-            ],
-            axis=-1,
-        )
-        re = tf.stack(
-            [
-                f(s) * (s - (m1 + m2) ** 2)
-                for f, (m1, m2) in zip(self.int_f, self.mass_list)
-            ],
-            axis=-1,
-        )
-        re0 = tf.stack(
-            [
-                f(s0) * (s0 - (m1 + m2) ** 2)
-                for f, (m1, m2) in zip(self.int_f, self.mass_list)
-            ],
-            axis=-1,
-        )
-        real = s0 - s - tf.reduce_sum(gi * (re - re0), axis=-1) / np.pi
-        imag = tf.reduce_sum(gi * im, axis=-1)
-        dom = real**2 + imag**2
-        return tf.complex(real / dom, imag / dom)
+    def im_weight(self, s, m1, m2, l=0):
+        return s - (m1 + m2) ** 2
 
-    def get_amp(self, *args, **kwargs):
-        return self(args[0]["m"])
+
+@register_particle("DI3")
+class DispersionIntegralParticle3(DispersionIntegralParticle2):
+    """
+
+    Dispersion Integral model. In the model a linear interpolation is used to avoid integration every times in fitting. No paramters are allow in the integration.
+
+    .. math::
+        f(s) = \\frac{1}{m_0^2 - s - \\sum_{i} g_i^2 [Re\\Pi_i(s) -Re\\Pi_i(m_0^2) + i Im \\Pi_i(s)] }
+
+    where :math:`Im \\Pi_i(s)=\\rho_i(s)n_i^2(s)`, :math:`n_i(s)={q}^{l} {B_l'}(q,1/d, d)`.
+
+    The real parts of :math:`\Pi(s)` is defined using the dispersion intergral
+
+    .. math::
+
+        Re \\Pi_i(s) = \\frac{\\color{red}s}{\\pi} P \\int_{s_{th,i}}^{\\infty} \\frac{Im \\Pi_i(s')}{(s' - s)({\\color{red}s'})} \\mathrm{d} s'
+
+    .. note::
+
+        Small `int_N` will have bad precision.
+
+    The shape of :math:`\\Pi(s)`
+
+    .. plot::
+
+        >>> import matplotlib.pyplot as plt
+        >>> import tensorflow as tf
+        >>> from tf_pwa.amp.dispersion_integral import DispersionIntegralParticle3, chew_mandelstam
+        >>> plt.clf()
+        >>> m = np.linspace(0.6, 1.6, 1001)
+        >>> s = m * m
+        >>> M_K = 0.493677
+        >>> M_eta = 0.547862
+        >>> M_pi = 0.1349768
+        >>> p = DispersionIntegralParticle3("A0_980_DI", mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=101)
+        >>> p.init_params()
+        >>> p2 = DispersionIntegralParticle3("A0_980_DI", mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=1001)
+        >>> p2.init_params()
+        >>> y1 = p.rho_prime(s, M_K, M_K)* (s)
+        >>> scale1 = 1/np.max(y1)
+        >>> x1 = p.int_f[0](s) * (s)/np.pi
+        >>> x2 = p2.int_f[0](s) * (s)/np.pi
+        >>> p_ref = DispersionIntegralParticle3("A0_980_DI", mass_range=(0.6,1.6), mass_list=[[M_K, M_K],[M_eta, M_pi]], int_N=11, int_method="scipy")
+        >>> p_ref.init_params()
+        >>> s_ref = np.linspace(0.6**2, 1.6**2-1e-6, 11)
+        >>> x_ref = p_ref.int_f[0](s_ref) * (s_ref)/np.pi
+        >>> _ = plt.plot(m, x1* scale1, label="Re $\\\\Pi (s), N=101$")
+        >>> _ = plt.plot(m, x2* scale1, label="Re $\\\\Pi (s), N=1001$")
+        >>> _ = plt.plot(m, y1* scale1, label="Im $\\\\Pi (s)$")
+        >>> _ = plt.scatter(np.sqrt(s_ref), x_ref* scale1, label="scipy integration")
+        >>> _ = plt.legend()
+
+    The Argand plot
+
+    .. plot::
+
+        >>> import matplotlib.pyplot as plt
+        >>> plt.clf()
+        >>> M_K = 0.493677
+        >>> M_eta = 0.547862
+        >>> M_pi = 0.1349768
+        >>> from tf_pwa.utils import plot_particle_model
+        >>> axis = plot_particle_model("DI3", dict(mass=0.98, mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], l_list=[0,1], int_N=101, dyn_int=True), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05])
+        >>> _ = plot_particle_model("DI3", dict(mass=0.98, mass_range=(0.5,1.7), mass_list=[[M_K, M_K],[M_eta, M_pi]], l_list=[0,1], int_N=1001), {"R_BC_g_0": 0.415,"R_BC_g_1": 0.405}, mrange=[0.93, 1.05], axis=axis)
+        >>> _ = axis[3].legend(["N=101", "N=1001"])
+
+
+    """
+
+    def im_weight(self, s, m1, m2, l=0):
+        return s
