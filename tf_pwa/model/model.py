@@ -445,6 +445,7 @@ class BaseModel(object):
                 zip(g_ln_data, g_int_mc),
             )
         )
+        g = tf.convert_to_tensor(g, dtype=ln_data.dtype)
         nll = -ln_data + sw * self.int_f(int_mc)
         return nll, g
 
@@ -1255,7 +1256,7 @@ class FCN(object):
         constr = self.gauss_constr.get_constrain_term()
         constr_grad = self.gauss_constr.get_constrain_grad()
         self.cached_nll = nll + constr
-        return float(self.cached_nll), g + constr_grad
+        return self.cached_nll, g + constr_grad
 
     def get_nll_grad_hessian(self, x={}, batch=None):
         """
@@ -1405,7 +1406,7 @@ class CombineFCN(object):
         constr = self.gauss_constr.get_constrain_term()
         constr_grad = self.gauss_constr.get_constrain_grad()
         self.cached_nll = nll + constr
-        return float(self.cached_nll), g + constr_grad
+        return self.cached_nll, g + constr_grad
 
     def get_nll_grad_hessian(self, x={}, batch=None):
         """
