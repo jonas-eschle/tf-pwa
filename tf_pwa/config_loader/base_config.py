@@ -1,4 +1,5 @@
 import copy
+from pathlib import Path
 
 import yaml
 
@@ -8,6 +9,8 @@ def load_config(file_name, share_dict=None):
         share_dict = {}
     if isinstance(file_name, dict):
         return copy.deepcopy(file_name)
+    if isinstance(file_name, Path):
+        file_name = str(file_name)
     if isinstance(file_name, str):
         if file_name in share_dict:
             return load_config(share_dict[file_name])
